@@ -5,7 +5,9 @@
 
 新增prompt tuning和prefix tuning两种peft方法，还是使用open-instruct框架。
 
-目前已经测试：prefix tuning可以正常运行，使用1B的模型，但是prompt tuning会卡在处理数据的那一步，不知道为什么。在54机器上测试的。
+目前已经测试：prefix tuning和prompt tuning可以正常运行，使用1B的模型，在54机器上测试的。
+
+问题：这两个新的peft方法的超参不知道设置多少合适，比如`learning_rate`, `warmup_ratio `和`weight_decay`之类的。小样本测试prompt tuning，loss是上升的。
 
 使用方法：
 
@@ -34,7 +36,7 @@
 ```
 
 新加的代码逻辑
-这里有超参`num_virtual_tokens`不知道设置多少合适
+- 这里有超参`num_virtual_tokens`不知道设置多少合适
 
 ```
 ## Add new PEFT methods compare with the original open_instruct/finetune.py file.
