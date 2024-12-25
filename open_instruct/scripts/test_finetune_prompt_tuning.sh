@@ -1,8 +1,9 @@
 export CUDA_VISIBLE_DEVICES=0,1
 
-MODEL_NAME=meta-llama/Llama-3.2-1B
+MODEL_NAME=meta-llama/Llama-3.1-8B
+#meta-llama/Llama-3.2-1B
 #meta-llama/Llama-3.1-8B
-MODEL_SIZE=1B
+MODEL_SIZE=8B
 NUM_GPUS=2
 BATCH_SIZE_PER_GPU=1
 TOTAL_BATCH_SIZE=32
@@ -19,15 +20,15 @@ accelerate launch \
     --main_process_port $MAIN_PROCESS_PORT \
     --use_deepspeed \
     --deepspeed_config_file configs/ds_configs/stage3_no_offloading_accelerate.conf \
-    --deepspeed_multinode_launcher standard /home/lishizheng/code/peft_study/open-instruct/open_instruct/finetune_peft.py \
+    --deepspeed_multinode_launcher standard open_instruct/finetune_peft.py  \
     --model_name_or_path $MODEL_NAME \
     --use_flash_attn \
-    --use_prefix_tuning \
-    --num_virtual_tokens 30 \
+    --use_prompt_tuning \
+    --num_virtual_tokens 8 \
     --tokenizer_name $MODEL_NAME \
     --use_slow_tokenizer \
-    --train_file /home/lishizheng/code/peft_study/open-instruct/data/tulu-3-sft-mixture-json-sampled/train_sampled_9k.json \
-    --max_seq_length 1024 \
+    --train_file data/tulu-3-sft-mixture-json/train.json \
+    --max_seq_length 2048 \
     --preprocessing_num_workers 16 \
     --checkpointing_steps epoch \
     --per_device_train_batch_size $BATCH_SIZE_PER_GPU \
@@ -37,7 +38,7 @@ accelerate launch \
     --warmup_ratio 0.03 \
     --weight_decay 0. \
     --num_train_epochs 1 \
-    --output_dir output/llama_3_${MODEL_SIZE}_prefix_tuning/ \
+    --output_dir output/llama_3_${MODEL_SIZE}_prompt_tuning_seqlen_2048/ \
     --with_tracking \
     --report_to wandb \
     --logging_steps 1 
