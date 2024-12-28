@@ -756,6 +756,8 @@ def main(args: FlatArguments):
         prompt_tuning_init_text="Follow the instruction",
         tokenizer_name_or_path=args.tokenizer_name,
         )
+        model = get_peft_model(model, peft_config)
+        model.print_trainable_parameters()
 
     elif args.gradient_checkpointing:
         model.gradient_checkpointing_enable()
