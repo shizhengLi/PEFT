@@ -583,14 +583,17 @@ def run_eval(args_dict: dict):
             "task_name": task_name,
             "task_hash": task_hash["hash"],
             "model_hash": model_hash["hash"],
-            "model_config": model_config,
+            "model_config": {  # Save only the serializable parts of model_config
+                "model_path": model_config.get("model_path"),
+                "revision": model_config.get("revision")
+            },
             "task_config": task_config,
             "compute_config": remove_none_values(compute_config),
             "processing_time": processing_time,
             "current_date": datetime.datetime.now(tz=datetime.timezone.utc).strftime(
                 "%Y-%m-%d %H:%M:%S UTC"
             ),
-            "num_instances": 0,  # TODO: Add this for no model case later
+            "num_instances": 0,
             "beaker_info": beaker_env_variables,
         }
 
@@ -745,14 +748,17 @@ def run_eval(args_dict: dict):
             }
             for m in metrics_all
         ]
-        logger.info(f"Saving beaker metrics.json so in {beaker_metrics_file}...")
-        # Put summary with the lowest alphabetical key, so it appears first in beaker
+        logger.info(f"Saving beaker metrics.json to {beaker_metrics_file}...")
         save_json(
             beaker_metrics_file,
             {
                 "all_primary_scores": primary_score_summary,
                 "metrics": metrics_simple,
-                "model_config": model_hash["non_default"],
+                # Reduced model config to only necessary serializable data
+                "model_config": {
+                    "model_path": model_config.get("model_path"),
+                    "revision": model_config.get("revision")
+                },
             },
         )
 
