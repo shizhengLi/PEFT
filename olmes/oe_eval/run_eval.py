@@ -431,6 +431,7 @@ def run_eval(args_dict: dict):
     eval_model = None
     tokenizer = None
 
+
     # PEFT配置
     peft_config_path = eval_config.get("peft_config_path", None)
     if peft_config_path:
@@ -438,25 +439,7 @@ def run_eval(args_dict: dict):
 
         # 加载PEFT配置
         peft_config = PeftConfig.from_pretrained(peft_config_path)
-        base_model = AutoModelForCausalLM.from_pretrained(
-            peft_config.base_model_name_or_path,
-            torch_dtype="auto"
-        )
-        # 使用 PeftModel 包装基础模型
-        peft_model = PeftModel.from_pretrained(base_model, peft_config_path)
         
-        # ==== 从 PeftModel 提取信息并整合 model_config ====
-        # 更新 model_config，使其符合 load_model 方法所需结构
-        model_config.update({
-            "model_path": peft_config.base_model_name_or_path,
-            "model": peft_model,   # 将整合后的 Peft 模型传入 load_model
-            "model_type": "hf",    # 模型类型仍然是 "hf"，因为我们用的是 HuggingFace 加载的基础模型
-            # 如果有其他需要添加的信息，比如 max_length，可在此更新
-        })
-
-        # 调用 load_model，完成最终模型包装
-        eval_model = load_model(model_config)
-
         # 加载tokenizer
         tokenizer = AutoTokenizer.from_pretrained(peft_config.base_model_name_or_path)
         if isinstance(tokenizer, PreTrainedTokenizerFast):
@@ -469,11 +452,47 @@ def run_eval(args_dict: dict):
                 logger.info(f"chat_template: {chat_template}")
             else:
                 logger.warning("PEFT tokenizer config does not contain chat_template!")
-    else:
-        # 仍然使用原有逻辑加载模型和tokenizer
-        eval_model = load_model(model_config)
-        #tokenizer = ...  # 使用之前的tokenizer逻辑
 
+        # 加载基础模型和PEFT模型
+        base_model = AutoModelForCausalLM.from_pretrained(
+            peft_config.base_model_name_or_path,
+            torch_dtype="auto"
+        )
+        peft_model = PeftModel.from_pretrained(base_model, peft_config_path)
+        
+        # 打印PEFT模型信息
+        logger.info("=== PEFT Model Information ===")
+        logger.info(f"PEFT Config Type: {type(peft_config)}")
+        logger.info(f"PEFT Config: {peft_config}")
+        logger.info(f"Is model a PeftModel: {isinstance(peft_model, PeftModel)}")
+        logger.info(f"Active adapters: {peft_model.active_adapters}")
+        logger.info(f"Peft model modules: {[n for n, _ in peft_model.named_modules() if 'lora' in n.lower()]}")
+        
+        # 更新 model_config
+        model_config.update({
+            "model_type": "hf",
+            "tokenizer": tokenizer,
+        })
+
+        # 调用 load_model
+        eval_model = load_model({
+            **model_config,
+            "model": peft_model  # 关键点：将PEFT模型作为 `model` 参数
+        })
+        
+        # 打印加载后的模型信息
+        logger.info("\n=== Loaded Model Information ===")
+        logger.info(f"Model type: {type(eval_model)}")
+        if hasattr(eval_model, 'model'):
+            logger.info(f"Internal model type: {type(eval_model.model)}")
+            logger.info(f"Is internal model a PeftModel: {isinstance(eval_model.model, PeftModel)}")
+            if isinstance(eval_model.model, PeftModel):
+                logger.info(f"Active adapters after loading: {eval_model.model.active_adapters}")
+                logger.info(f"LoRA modules after loading: {[n for n, _ in eval_model.model.named_modules() if 'lora' in n.lower()]}")
+    else:
+        # 使用原有逻辑加载模型和 tokenizer
+        eval_model = load_model(model_config)
+    
     # 确保chat_template被配置
     if "chat_template" not in model_config:
         raise ValueError("Tokenizer does not have chat_template!")
